@@ -104,10 +104,10 @@ export default function Dashboard({ setCurrentPage }) {
                 {[
                     { color: 'blue', icon: '📋', value: animateStats ? '1,247' : '0', label: 'Total Applications', change: '+18.3%', dir: 'up' },
                     { color: 'emerald', icon: '✅', value: animateStats ? '847' : '0', label: 'Approved Loans', change: '+12.7%', dir: 'up' },
-                    { color: 'ruby', icon: '⚡', value: animateStats ? '28 min', label: 'Avg Appraisal Time', change: '↓ 96% faster', dir: 'up' },
-                    { color: 'gold', icon: '🎯', value: animateStats ? '94.2%', label: 'Model Accuracy', change: '+2.1% MoM', dir: 'up' },
-                    { color: 'violet', icon: '💰', value: animateStats ? '₹47,320 Cr', label: 'Portfolio Managed', change: '+₹3,200 Cr', dir: 'up' },
-                    { color: 'cyan', icon: '🛡️', value: animateStats ? '0.8%', label: 'NPA Rate', change: '−0.3% YoY', dir: 'up' },
+                    { color: 'ruby', icon: '⚡', value: animateStats ? '28 min' : '...', label: 'Avg Appraisal Time', change: '↓ 96% faster', dir: 'up' },
+                    { color: 'gold', icon: '🎯', value: animateStats ? '94.2%' : '0%', label: 'Model Accuracy', change: '+2.1% MoM', dir: 'up' },
+                    { color: 'violet', icon: '💰', value: animateStats ? '47,320 Cr' : '0', label: 'Portfolio Managed', change: '+3,200 Cr', dir: 'up' },
+                    { color: 'cyan', icon: '🛡️', value: animateStats ? '0.8%' : '0%', label: 'NPA Rate', change: '-0.3% YoY', dir: 'up' },
                 ].map((s, i) => (
                     <div className={`stat-card ${s.color}`} key={i}>
                         <div className={`stat-icon ${s.color}`}>{s.icon}</div>
