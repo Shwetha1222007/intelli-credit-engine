@@ -5,18 +5,11 @@ import {
 } from 'recharts'
 import { CheckCircle, XCircle, AlertTriangle, Zap, Brain, TrendingUp, Info } from 'lucide-react'
 
-const radarData = [
-    { subject: 'Character', score: 68, fullMark: 100 },
-    { subject: 'Capacity', score: 74, fullMark: 100 },
-    { subject: 'Capital', score: 62, fullMark: 100 },
-    { subject: 'Collateral', score: 80, fullMark: 100 },
-    { subject: 'Conditions', score: 55, fullMark: 100 },
-]
-
-const fiveCData = [
+const defaultFiveCData = [
     {
+        id: 'character',
         letter: 'C1', name: 'Character', fullName: 'Promoter Credibility',
-        score: 68, color: '#2541b2',
+        score: 68, color: '#2541b2', weight: 20,
         factors: [
             { name: 'Industry experience (36 yrs)', score: 9, weight: 20 },
             { name: 'DIN Active / No disqualification', score: 10, weight: 15 },
@@ -27,8 +20,9 @@ const fiveCData = [
         insight: 'High promoter pledge is a concern. No past defaults strengthen credibility.',
     },
     {
+        id: 'capacity',
         letter: 'C2', name: 'Capacity', fullName: 'Repayment Ability',
-        score: 74, color: '#00d98b',
+        score: 74, color: '#00d98b', weight: 25,
         factors: [
             { name: 'DSCR (2.18x)', score: 8, weight: 30 },
             { name: 'ICR (3.4x)', score: 7, weight: 20 },
@@ -39,8 +33,10 @@ const fiveCData = [
         insight: 'Strong DSCR of 2.18x well above 1.5x threshold. Adequate repayment capacity.',
     },
     {
+        id: 'capital',
+        id_str: 'capital',
         letter: 'C3', name: 'Capital', fullName: 'Financial Strength',
-        score: 62, color: '#f5a623',
+        score: 62, color: '#f5a623', weight: 20,
         factors: [
             { name: 'Net worth (₹686 Cr)', score: 7, weight: 25 },
             { name: 'Debt/Equity (1.82x)', score: 5, weight: 30 },
@@ -51,8 +47,9 @@ const fiveCData = [
         insight: 'D/E ratio slightly stretched at 1.82x. Contingent liabilities add risk.',
     },
     {
+        id: 'collateral',
         letter: 'C4', name: 'Collateral', fullName: 'Asset Backing',
-        score: 80, color: '#8b5cf6',
+        score: 80, color: '#8b5cf6', weight: 20,
         factors: [
             { name: 'FMRV of security (₹365 Cr)', score: 9, weight: 35 },
             { name: 'Coverage ratio (146%)', score: 8, weight: 30 },
@@ -62,8 +59,9 @@ const fiveCData = [
         insight: 'Collateral coverage of 146% provides good security cushion for lenders.',
     },
     {
+        id: 'conditions',
         letter: 'C5', name: 'Conditions', fullName: 'Industry & Economy',
-        score: 55, color: '#06b6d4',
+        score: 55, color: '#06b6d4', weight: 15,
         factors: [
             { name: 'Sector outlook (Cautious)', score: 5, weight: 30 },
             { name: 'Cotton price risk', score: 4, weight: 25 },
@@ -107,16 +105,30 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function RecommendationEngine() {
     const [selectedC, setSelectedC] = useState(null)
     const [activeTab, setActiveTab] = useState('overview')
+    const [fiveCData, setFiveCData] = useState(defaultFiveCData)
 
-    const totalScore = Math.round(fiveCData.reduce((acc, c) => acc + c.score, 0) / fiveCData.length)
-    const decision = totalScore >= 70 ? 'APPROVED' : totalScore >= 55 ? 'CONDITIONAL' : 'REJECTED'
+    const totalScore = Math.round(
+        fiveCData.reduce((acc, c) => acc + (c.score * c.weight) / 100, 0)
+    )
+
+    const decision = totalScore >= 75 ? 'APPROVED' : totalScore >= 60 ? 'CONDITIONAL' : 'REJECTED'
     const decisionColor = decision === 'APPROVED' ? 'var(--accent-emerald)' : decision === 'CONDITIONAL' ? 'var(--accent-gold)' : 'var(--accent-ruby)'
+
+    const radarData = fiveCData.map(c => ({
+        subject: c.name,
+        score: c.score,
+        fullMark: 100
+    }))
+
+    const updateWeight = (id, newWeight) => {
+        setFiveCData(prev => prev.map(c => (c.id === id || c.id_str === id) ? { ...c, weight: parseInt(newWeight) } : c))
+    }
 
     const ScoreGauge = ({ score, size = 140 }) => {
         const radius = (size / 2) - 10
         const circumference = 2 * Math.PI * radius
         const dashOffset = circumference - (score / 100) * circumference
-        const color = score >= 70 ? '#00d98b' : score >= 55 ? '#f5a623' : '#ff4d6d'
+        const color = score >= 75 ? '#00d98b' : score >= 60 ? '#f5a623' : '#ff4d6d'
         return (
             <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
                 <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
@@ -127,13 +139,15 @@ export default function RecommendationEngine() {
                     strokeDashoffset={dashOffset}
                     strokeLinecap="round"
                     transform={`rotate(-90 ${size / 2} ${size / 2})`}
-                    style={{ transition: 'stroke-dashoffset 1.5s ease', filter: `drop-shadow(0 0 8px ${color})` }}
+                    style={{ transition: 'stroke-dashoffset 0.8s ease', filter: `drop-shadow(0 0 8px ${color})` }}
                 />
                 <text x={size / 2} y={size / 2 - 6} textAnchor="middle" fontSize="28" fontWeight="800" fill={color} fontFamily="Outfit, sans-serif">{score}</text>
                 <text x={size / 2} y={size / 2 + 14} textAnchor="middle" fontSize="11" fill="#8892b0">/ 100</text>
             </svg>
         )
     }
+
+    const totalWeight = fiveCData.reduce((a, b) => a + b.weight, 0)
 
     return (
         <div>
@@ -148,6 +162,7 @@ export default function RecommendationEngine() {
                 alignItems: 'center',
                 gap: '32px',
                 flexWrap: 'wrap',
+                transition: 'all 0.5s ease'
             }}>
                 <ScoreGauge score={totalScore} size={140} />
                 <div style={{ flex: 1 }}>
@@ -157,23 +172,25 @@ export default function RecommendationEngine() {
                         {decision === 'CONDITIONAL' ? 'CONDITIONAL APPROVAL' : decision}
                     </div>
                     <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '700px', lineHeight: 1.7 }}>
-                        <strong style={{ color: 'var(--text-primary)' }}>AI Rationale:</strong> Loan recommended for conditional approval with enhanced covenant package. Adequate DSCR (2.18x) and strong collateral coverage (146%). Primary concerns: elevated promoter pledge (38.4%), stretched D/E ratio (1.82x), and cautious sector outlook. Recommend quarterly financial covenant monitoring and promoter de-pledge milestone.
+                        <strong style={{ color: 'var(--text-primary)' }}>AI Rationale:</strong> {
+                            totalScore >= 75
+                                ? "Loan strongly recommended for approval based on superior repayment capability and robust collateral backing."
+                                : totalScore >= 60
+                                    ? "Loan recommended for conditional approval with enhanced covenant package. Primary concerns: stretched capital structure and cautious sector outlook. Monitoring required."
+                                    : "Loan not recommended. Risk score falls below institutional threshold due to critical weaknesses in capital and market conditions."
+                        }
                     </p>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '16px' }}>
                         <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-sm)', padding: '10px 18px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent-gold)' }}>₹200 Cr</div>
+                            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent-gold)' }}>₹{totalScore > 75 ? '250' : totalScore > 60 ? '200' : '0'} Cr</div>
                             <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Sanctioned Limit</div>
                         </div>
                         <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-sm)', padding: '10px 18px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent-gold)' }}>10.75%</div>
+                            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent-gold)' }}>{totalScore > 80 ? '9.5' : totalScore > 65 ? '10.75' : '12.5'}%</div>
                             <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Risk-based Rate</div>
                         </div>
                         <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-sm)', padding: '10px 18px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent-gold)' }}>7 Years</div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Recommended Tenor</div>
-                        </div>
-                        <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-sm)', padding: '10px 18px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '18px', fontWeight: 800, color: decisionColor }}>{decision === 'CONDITIONAL' ? 'BB+' : decision === 'APPROVED' ? 'BBB' : 'BB-'}</div>
+                            <div style={{ fontSize: '18px', fontWeight: 800, color: decisionColor }}>{totalScore >= 85 ? 'A' : totalScore >= 75 ? 'BBB' : totalScore >= 60 ? 'BB+' : 'BB-'}</div>
                             <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Internal Rating</div>
                         </div>
                     </div>
@@ -200,7 +217,7 @@ export default function RecommendationEngine() {
                                 onClick={() => setSelectedC(selectedC === i ? null : i)}
                                 id={`card-five-c-${c.letter.toLowerCase()}`}
                             >
-                                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{c.letter}</div>
+                                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{c.letter} • {c.weight}% Weight</div>
                                 <div className="five-c-score" style={{ color: c.color }}>{c.score}</div>
                                 <div className="five-c-label" style={{ color: c.color }}>{c.name}</div>
                                 <div className="five-c-name">{c.fullName}</div>
@@ -208,15 +225,19 @@ export default function RecommendationEngine() {
                                     <div className="progress-bar">
                                         <div className="progress-fill" style={{ width: `${c.score}%`, background: c.color }} />
                                     </div>
+                                    <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px' }}>Contribution: {Math.round((c.score * c.weight) / 100)} pts</div>
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    {/* Radar Chart */}
+                    {/* Radar & Tuning */}
                     <div className="grid-2">
                         <div className="card">
-                            <div className="card-title" style={{ marginBottom: '10px' }}>🕸️ Five Cs Radar Assessment</div>
+                            <div className="card-header">
+                                <div className="card-title">🕸️ Five Cs Radar Assessment</div>
+                                <div className="badge badge-blue">AI Benchmark</div>
+                            </div>
                             <ResponsiveContainer width="100%" height={300}>
                                 <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
                                     <PolarGrid stroke="rgba(255,255,255,0.08)" />
@@ -226,35 +247,47 @@ export default function RecommendationEngine() {
                                 </RadarChart>
                             </ResponsiveContainer>
                         </div>
+
                         <div className="card">
-                            <div className="card-title" style={{ marginBottom: '10px' }}>📈 Key Financial Ratios vs Benchmark</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                {[
-                                    { label: 'DSCR', actual: 2.18, benchmark: 1.5, unit: 'x', positive: true },
-                                    { label: 'Current Ratio', actual: 2.14, benchmark: 1.5, unit: 'x', positive: true },
-                                    { label: 'Debt / Equity', actual: 1.82, benchmark: 2.0, unit: 'x', positive: true },
-                                    { label: 'EBITDA Margin', actual: 18.7, benchmark: 12, unit: '%', positive: true },
-                                    { label: 'ICR', actual: 3.4, benchmark: 2.5, unit: 'x', positive: true },
-                                    { label: 'NPA Risk Score', actual: 22, benchmark: 30, unit: '/100', positive: false },
-                                ].map((r, i) => (
-                                    <div key={i}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                                            <span style={{ fontWeight: 600 }}>{r.label}</span>
-                                            <div style={{ display: 'flex', gap: '12px' }}>
-                                                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Benchmark: {r.benchmark}{r.unit}</span>
-                                                <span style={{ fontWeight: 700, color: r.positive ? 'var(--accent-emerald)' : 'var(--accent-ruby)' }}>
-                                                    {r.actual}{r.unit} {r.positive ? '✓' : '⚠'}
-                                                </span>
-                                            </div>
+                            <div className="card-header">
+                                <div className="card-title">🎛️ AI Sensitivity Tuning</div>
+                                <div className={`badge ${totalWeight === 100 ? 'badge-emerald' : 'badge-ruby'}`}>{totalWeight === 100 ? 'Weight Balanced' : `Weight mismatch: ${totalWeight}%`}</div>
+                            </div>
+                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                                Adjust individual C-weights to perform sensitivity analysis on the AI credit model.
+                            </p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {fiveCData.map(c => (
+                                    <div key={c.id || c.name.toLowerCase()}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
+                                            <span style={{ fontWeight: 600, color: c.color }}>{c.name} (Weight: {c.weight}%)</span>
+                                            <span style={{ fontWeight: 700 }}>{Math.round((c.score * c.weight) / 100)} pts</span>
                                         </div>
-                                        <div className="progress-bar">
-                                            <div className="progress-fill" style={{
-                                                width: `${Math.min((r.actual / (r.benchmark * 1.5)) * 100, 100)}%`,
-                                                background: r.positive ? 'var(--gradient-emerald)' : 'var(--gradient-ruby)'
-                                            }} />
+                                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                            <input
+                                                type="range" min="0" max="40"
+                                                value={c.weight}
+                                                style={{ flex: 1, accentColor: c.color, height: '4px' }}
+                                                onChange={(e) => updateWeight(c.id || c.name.toLowerCase(), e.target.value)}
+                                            />
+                                            <span style={{ minWidth: '30px', fontSize: '11px', color: 'var(--text-muted)' }}>{c.weight}%</span>
                                         </div>
                                     </div>
                                 ))}
+                                <div style={{
+                                    marginTop: '10px', padding: '12px', borderRadius: 'var(--radius-sm)',
+                                    background: 'rgba(255,255,255,0.03)', border: '1px solid var(--surface-border)',
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                }}>
+                                    <div style={{ fontSize: '12px' }}>
+                                        <div style={{ fontWeight: 700 }}>AI Predicted Score</div>
+                                        <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Normalized (Total / 100)</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: '20px', fontWeight: 900, color: decisionColor }}>{totalScore}</div>
+                                        <div style={{ fontSize: '10px', color: decisionColor, fontWeight: 700 }}>{decision}</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -285,7 +318,7 @@ export default function RecommendationEngine() {
                                         <div className="progress-bar" style={{ height: '4px' }}>
                                             <div className="progress-fill" style={{ width: `${f.score * 10}%`, background: c.color }} />
                                         </div>
-                                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>Weight: {f.weight}%</div>
+                                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>Factor weight in {c.letter}: {f.weight}%</div>
                                     </div>
                                 ))}
                             </div>
@@ -299,7 +332,7 @@ export default function RecommendationEngine() {
                     <div className="alert-box info" style={{ marginBottom: '20px' }}>
                         <Brain size={16} />
                         <div>
-                            <strong>XGBoost + SHAP Explainability</strong> — The decision engine uses an ensemble XGBoost model trained on 12 years of Indian corporate credit data (47,000+ observations). SHAP values explain each factor's contribution to the final score.
+                            <strong>XGBoost + SHAP Explainability</strong> — The decision engine uses an ensemble model with full explainability. SHAP values indicate how much each feature contributed to the final score delta from the mean.
                         </div>
                     </div>
 
@@ -319,35 +352,25 @@ export default function RecommendationEngine() {
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
-                            <div style={{ display: 'flex', gap: '12px', marginTop: '8px', fontSize: '11px' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-emerald)' }}><div style={{ width: '10px', height: '10px', background: '#00d98b', borderRadius: '2px' }} /> Positive Factor</span>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-ruby)' }}><div style={{ width: '10px', height: '10px', background: '#ff4d6d', borderRadius: '2px' }} /> Risk Factor</span>
-                            </div>
                         </div>
 
                         <div className="card">
-                            <div className="card-title" style={{ marginBottom: '14px' }}>📝 Decision Explanation (Plain Language)</div>
+                            <div className="card-title" style={{ marginBottom: '14px' }}>📝 Decision Explanation</div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {[
-                                    { type: 'positive', text: 'DSCR of 2.18x (benchmark 1.5x) indicates strong debt service ability from operations.' },
-                                    { type: 'positive', text: 'Collateral coverage of 146% provides adequate security for the proposed exposure.' },
-                                    { type: 'positive', text: 'No historical defaults or DPD in last 36 months per CIBIL bureau data.' },
-                                    { type: 'positive', text: 'EBITDA margin of 18.7% above textile sector average of 12%, reflecting operational efficiency.' },
-                                    { type: 'negative', text: 'Promoter pledge of 38.4% creates refinancing risk and signals potential liquidity stress at promoter level.' },
-                                    { type: 'negative', text: 'D/E ratio of 1.82x is elevated. Additional debt of ₹250 Cr would further stress the balance sheet.' },
-                                    { type: 'negative', text: 'Income Tax Tribunal demand of ₹34.6 Cr remains unresolved — contingent liability risk.' },
-                                    { type: 'negative', text: 'Textile sector facing cotton price inflation of 18% YoY, compressing margins industry-wide.' },
+                                    { type: 'positive', text: 'DSCR of 2.18x indicates strong debt service capacity.' },
+                                    { type: 'positive', text: 'Collateral coverage of 146% provides substantial cushion.' },
+                                    { type: 'positive', text: 'Excellent CIBIL score (782) reflecting debt discipline.' },
+                                    { type: 'negative', text: 'Promoter pledge (38.4%) is materially higher than industry average of 15%.' },
+                                    { type: 'negative', text: 'Sector outlook for Textiles remains cautious due to cotton price volatility.' },
                                 ].map((e, i) => (
                                     <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '13px', alignItems: 'flex-start' }}>
-                                        <span style={{ color: e.type === 'positive' ? 'var(--accent-emerald)' : 'var(--accent-ruby)', flexShrink: 0, marginTop: '2px' }}>
+                                        <span style={{ color: e.type === 'positive' ? 'var(--accent-emerald)' : 'var(--accent-ruby)', flexShrink: 0 }}>
                                             {e.type === 'positive' ? '✅' : '⚠️'}
                                         </span>
                                         <span style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{e.text}</span>
                                     </div>
                                 ))}
-                            </div>
-                            <div style={{ marginTop: '16px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: 'var(--radius-sm)', padding: '12px', fontSize: '13px', color: 'var(--accent-gold-light)' }}>
-                                <strong>Final AI Verdict:</strong> Conditional approval recommended at ₹200 Cr (vs ₹250 Cr requested) at 10.75% with quarterly financial covenants and de-pledge milestone for promoter.
                             </div>
                         </div>
                     </div>
@@ -355,29 +378,26 @@ export default function RecommendationEngine() {
             )}
 
             {activeTab === 'conditions' && (
-                <div>
-                    <div className="card" style={{ marginBottom: '20px' }}>
-                        <div className="card-title" style={{ marginBottom: '16px' }}>📋 Recommended Sanction Conditions</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {[
-                                { category: 'Financial Covenants', items: ['DSCR ≥ 1.75x (tested quarterly)', 'Debt/Equity ≤ 2.0x at all times', 'Minimum EBITDA of ₹480 Cr per annum', 'Current Ratio ≥ 1.5x'] },
-                                { category: 'Security', items: ['First pari passu charge on fixed assets ₹365 Cr', 'Personal guarantee of Mr. Vikram Agrawal (CMD)', 'Post-dated cheques for 12 installments', 'Pledge of additional 5% promoter shares'] },
-                                { category: 'Information Undertakings', items: ['Quarterly financial statements within 45 days', 'Annual audited accounts within 120 days', 'Immediate notification of any legal notices > ₹5 Cr', 'Monthly stock statements for working capital'] },
-                                { category: 'Milestones / Monitoring', items: ['Promoter pledge to reduce to ≤30% within 18 months', 'Resolution of IT Tribunal case within 24 months', 'Annual site inspection by credit officer', 'External rating review every 12 months'] },
-                            ].map((section, i) => (
-                                <div key={i} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-md)', padding: '14px 18px' }}>
-                                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary-200)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{section.category}</div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '6px' }}>
-                                        {section.items.map((item, j) => (
-                                            <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                                <span style={{ color: 'var(--accent-emerald)', marginTop: '2px', flexShrink: 0 }}>→</span>
-                                                {item}
-                                            </div>
-                                        ))}
-                                    </div>
+                <div className="card">
+                    <div className="card-title" style={{ marginBottom: '16px' }}>📋 Recommended Sanction Conditions</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {[
+                            { category: 'Financial', items: ['DSCR ≥ 1.75x', 'Debt/Equity ≤ 2.0x', 'Min Net Worth ₹500 Cr'] },
+                            { category: 'Security', items: ['Fixed Asset Charge', 'Promoter Guarantee', 'Additional 5% Share Pledge'] },
+                            { category: 'Monitoring', items: ['Quarterly Financials', 'Annual Audit', 'Monthly Site Visit'] },
+                        ].map((section, i) => (
+                            <div key={i} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-md)', padding: '14px 18px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary-200)', marginBottom: '10px' }}>{section.category}</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '6px' }}>
+                                    {section.items.map((item, j) => (
+                                        <div key={j} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                            <div style={{ width: '4px', height: '4px', background: 'var(--accent-emerald)', borderRadius: '50%' }} />
+                                            {item}
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}

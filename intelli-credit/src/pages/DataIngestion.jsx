@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Upload, FileText, CheckCircle, Clock, AlertTriangle, X, Eye, Cpu, Zap } from 'lucide-react'
+import { Upload, FileText, CheckCircle, Clock, AlertTriangle, X, Eye, Cpu, Zap, Search, ShieldCheck, Database, FileSearch } from 'lucide-react'
 
 const documentTypes = [
     { id: 'gst', label: 'GST Returns', desc: 'GSTR-1, GSTR-3B, GSTR-9 filings', icon: '🧾', category: 'structured', required: true },
@@ -13,7 +13,7 @@ const documentTypes = [
     { id: 'legal', label: 'Legal Notices / Court Orders', desc: 'All pending legal matters', icon: '⚖️', category: 'unstructured', required: false },
 ]
 
-const extractedMetrics = [
+const extractedMetricsData = [
     { label: 'Revenue (FY24)', value: '₹2,847 Cr', trend: '+12.3%', status: 'verified' },
     { label: 'EBITDA Margin', value: '18.7%', trend: '+1.2%', status: 'verified' },
     { label: 'Net Profit', value: '₹342 Cr', trend: '+8.5%', status: 'verified' },
@@ -25,10 +25,19 @@ const extractedMetrics = [
     { label: 'Tax Compliance Score', value: '94/100', trend: 'No defaults', status: 'verified' },
 ]
 
-const anomalies = [
+const anomaliesData = [
     { severity: 'warning', title: 'GST-Bank Statement Variance Detected', desc: 'GST declared turnover ₹2,910 Cr vs bank credits ₹2,847 Cr. Variance of 2.2% – within acceptable threshold but flagged for review.' },
     { severity: 'success', title: 'No Circular Trading Pattern', desc: 'AI analysis of GST GSTR-1 data shows no significant circular trading patterns. Top 10 buyers and sellers cross-checked.' },
     { severity: 'danger', title: 'Contingent Liabilities Identified', desc: 'Annual report discloses ₹185 Cr in contingent liabilities related to pending litigation. Incorporated in risk model.' },
+]
+
+const aiSteps = [
+    { label: 'Initializing Vision OCR Engines...', icon: <FileText size={18} /> },
+    { label: 'Scanning GSTR-1 vs Bank Credits for Circular Trading...', icon: <Search size={18} /> },
+    { label: 'Parsing UNSTRUCTURED Annual Reports (210 pages)...', icon: <FileSearch size={18} /> },
+    { label: 'Identifying Financial Commitments and Liabilities...', icon: <ShieldCheck size={18} /> },
+    { label: 'Cross-checking MCA Filings for Promoter Background...', icon: <Database size={18} /> },
+    { label: 'Generating Financial Insight Vector Map...', icon: <Zap size={18} /> },
 ]
 
 export default function DataIngestion() {
@@ -36,14 +45,36 @@ export default function DataIngestion() {
         gst: { status: 'done', pages: 48, extractedAt: '14:02' },
         itr: { status: 'done', pages: 124, extractedAt: '14:03' },
         bank: { status: 'done', pages: 380, extractedAt: '14:05' },
-        annual: { status: 'processing', pages: 210, extractedAt: null },
-        financial: { status: 'pending', pages: null, extractedAt: null },
     })
     const [activeTab, setActiveTab] = useState('upload')
-    const [dragActive, setDragActive] = useState(false)
+    const [isExtracting, setIsExtracting] = useState(false)
+    const [extractProgress, setExtractProgress] = useState(0)
+    const [activeAiStep, setActiveAiStep] = useState(0)
     const [companyName, setCompanyName] = useState('Agrawal Textiles Pvt Ltd')
 
-    const getDocStatus = (id) => uploadedDocs[id] || null
+    const runExtraction = () => {
+        setIsExtracting(true)
+        setExtractProgress(0)
+        setActiveAiStep(0)
+
+        const interval = setInterval(() => {
+            setExtractProgress(prev => {
+                if (prev >= 100) {
+                    clearInterval(interval)
+                    setTimeout(() => {
+                        setIsExtracting(false)
+                        setActiveTab('extracted')
+                    }, 800)
+                    return 100
+                }
+                const next = prev + 1.2
+                if (next > (setActiveAiStep + 1) * (100 / aiSteps.length)) {
+                    setActiveAiStep(s => Math.min(s + 1, aiSteps.length - 1))
+                }
+                return next
+            })
+        }, 50)
+    }
 
     const simulateUpload = (id) => {
         setUploadedDocs(prev => ({ ...prev, [id]: { status: 'processing', pages: null, extractedAt: null } }))
@@ -52,17 +83,51 @@ export default function DataIngestion() {
                 ...prev,
                 [id]: { status: 'done', pages: Math.floor(Math.random() * 200) + 20, extractedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) }
             }))
-        }, 2000)
-    }
-
-    const statusIcon = (status) => {
-        if (status === 'done') return <CheckCircle size={15} color="var(--accent-emerald)" />
-        if (status === 'processing') return <Clock size={15} color="var(--accent-gold)" style={{ animation: 'spin 1s linear infinite' }} />
-        return null
+        }, 1500)
     }
 
     return (
-        <div>
+        <div style={{ position: 'relative' }}>
+            {/* Extraction Overlay */}
+            {isExtracting && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 1000,
+                    background: 'rgba(10,14,24,0.92)', backdropFilter: 'blur(8px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexDirection: 'column', color: 'white'
+                }}>
+                    <div className="card" style={{ width: '500px', border: '1px solid rgba(37,65,178,0.4)', padding: '32px', textAlign: 'center', background: 'var(--surface-card)' }}>
+                        <div style={{ marginBottom: '24px', position: 'relative' }}>
+                            <div className="ai-icon-pulse" style={{ fontSize: '48px' }}>🤖</div>
+                            <div className="status-dot active" style={{ position: 'absolute', bottom: '10px', right: '40%' }} />
+                        </div>
+                        <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>Intelli-Credit AI Extraction</h2>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '24px' }}>Processing multidimensional financial datasets...</p>
+
+                        <div className="progress-bar" style={{ height: '8px', marginBottom: '24px' }}>
+                            <div className="progress-fill blue" style={{ width: `${extractProgress}%`, boxShadow: '0 0 12px var(--primary-500)' }} />
+                        </div>
+
+                        <div style={{ textAlign: 'left', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
+                            {aiSteps.map((step, i) => (
+                                <div key={i} style={{
+                                    display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', marginBottom: '12px',
+                                    opacity: i === activeAiStep ? 1 : i < activeAiStep ? 0.6 : 0.3,
+                                    transition: 'all 0.3s ease',
+                                    color: i < activeAiStep ? 'var(--accent-emerald)' : 'white'
+                                }}>
+                                    <div style={{ color: i === activeAiStep ? 'var(--accent-gold)' : i < activeAiStep ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
+                                        {i < activeAiStep ? <CheckCircle size={16} /> : step.icon}
+                                    </div>
+                                    <span style={{ fontWeight: i === activeAiStep ? 700 : 400 }}>{step.label}</span>
+                                    {i === activeAiStep && <div className="status-dot active" style={{ marginLeft: 'auto' }} />}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Company Info */}
             <div className="card" style={{ marginBottom: '20px' }}>
                 <div className="card-header" style={{ marginBottom: '16px' }}>
@@ -72,38 +137,34 @@ export default function DataIngestion() {
                 <div className="grid-3" style={{ gap: '16px' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label">Company Name</label>
-                        <input className="form-input" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Enter company name" id="inp-company-name" />
+                        <input className="form-input" value={companyName} onChange={e => setCompanyName(e.target.value)} id="inp-company-name" />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">CIN / Registration No.</label>
+                        <label className="form-label">CIN</label>
                         <input className="form-input" defaultValue="U17111MH2008PTC184765" id="inp-cin" />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Loan Amount Requested</label>
+                        <label className="form-label">Loan Amount</label>
                         <input className="form-input" defaultValue="₹250 Crore" id="inp-loan-amount" />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Industry Sector</label>
+                        <label className="form-label">Sector</label>
                         <select className="form-select" id="sel-sector">
                             <option>Manufacturing - Textiles</option>
                             <option>Infrastructure</option>
                             <option>Retail & FMCG</option>
-                            <option>IT & Services</option>
-                            <option>Pharmaceuticals</option>
                         </select>
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Loan Type</label>
+                        <label className="form-label">Type</label>
                         <select className="form-select" id="sel-loan-type">
                             <option>Term Loan</option>
-                            <option>Working Capital</option>
                             <option>Cash Credit</option>
-                            <option>Letter of Credit</option>
                         </select>
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Assessment Date</label>
-                        <input className="form-input" type="date" defaultValue="2024-03-09" id="inp-assessment-date" />
+                        <label className="form-label">Date</label>
+                        <input className="form-input" type="date" defaultValue="2024-03-09" />
                     </div>
                 </div>
             </div>
@@ -119,83 +180,36 @@ export default function DataIngestion() {
 
             {activeTab === 'upload' && (
                 <div>
-                    {/* Drop Zone */}
-                    <div
-                        className={`upload-zone ${dragActive ? 'active' : ''}`}
-                        style={{ marginBottom: '20px' }}
-                        onDragOver={e => { e.preventDefault(); setDragActive(true) }}
-                        onDragLeave={() => setDragActive(false)}
-                        onDrop={e => { e.preventDefault(); setDragActive(false) }}
-                    >
+                    <div className="upload-zone" style={{ marginBottom: '20px' }}>
                         <div style={{ fontSize: '48px', marginBottom: '12px' }}>📁</div>
-                        <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>Drag & Drop Documents Here</div>
-                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                            Supports PDF, Excel, CSV, Word, Images (JPEG/PNG) — OCR enabled for scanned docs
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
-                            <span className="badge badge-blue">📄 PDF</span>
-                            <span className="badge badge-blue">📊 Excel</span>
-                            <span className="badge badge-blue">🖼️ Images (OCR)</span>
-                            <span className="badge badge-blue">📝 Word</span>
-                            <span className="badge badge-blue">📁 CSV</span>
-                        </div>
-                        <button className="btn btn-primary">
-                            <Upload size={15} /> Browse Files
-                        </button>
+                        <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>Upload Financial Data</div>
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>OCR enabled for scanned documents</p>
+                        <button className="btn btn-primary"><Upload size={15} /> Select Files</button>
                     </div>
 
-                    {/* Document Checklist */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         {documentTypes.map(doc => {
-                            const st = getDocStatus(doc.id)
+                            const st = uploadedDocs[doc.id]
                             return (
                                 <div key={doc.id} style={{
                                     background: 'var(--surface-card)',
-                                    border: `1px solid ${st?.status === 'done' ? 'rgba(0,217,139,0.2)' : st?.status === 'processing' ? 'rgba(245,166,35,0.2)' : 'var(--surface-border)'}`,
-                                    borderRadius: 'var(--radius-md)',
-                                    padding: '14px 16px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    transition: 'all 0.3s ease'
+                                    border: `1px solid ${st?.status === 'done' ? 'rgba(0,217,139,0.2)' : 'var(--surface-border)'}`,
+                                    borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px'
                                 }}>
                                     <span style={{ fontSize: '24px' }}>{doc.icon}</span>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                                            <span style={{ fontSize: '13px', fontWeight: 600 }}>{doc.label}</span>
-                                            {doc.required && <span className="badge badge-ruby" style={{ fontSize: '9px', padding: '1px 6px' }}>Required</span>}
-                                        </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: '13px', fontWeight: 600 }}>{doc.label} {doc.required && <span style={{ color: 'var(--accent-ruby)', fontSize: '10px' }}>*</span>}</div>
                                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{doc.desc}</div>
-                                        {st?.status === 'done' && (
-                                            <div style={{ fontSize: '10px', color: 'var(--accent-emerald)', marginTop: '3px' }}>
-                                                ✓ {st.pages} pages extracted · {st.extractedAt}
-                                            </div>
-                                        )}
-                                        {st?.status === 'processing' && (
-                                            <div style={{ fontSize: '10px', color: 'var(--accent-gold)', marginTop: '3px' }}>
-                                                ⟳ AI OCR + NLP processing...
-                                            </div>
-                                        )}
+                                        {st && <div style={{ fontSize: '10px', color: 'var(--accent-emerald)', marginTop: '2px' }}>✓ {st.pages || '...'} pages · {st.extractedAt || 'Processing'}</div>}
                                     </div>
-                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                        {statusIcon(st?.status)}
-                                        {!st && (
-                                            <button className="btn btn-secondary btn-sm" onClick={() => simulateUpload(doc.id)} id={`btn-upload-${doc.id}`}>
-                                                <Upload size={12} /> Upload
-                                            </button>
-                                        )}
-                                        {st?.status === 'processing' && (
-                                            <span style={{ fontSize: '11px', color: 'var(--accent-gold)' }}>Processing</span>
-                                        )}
-                                    </div>
+                                    {st?.status === 'done' ? <CheckCircle size={16} color="var(--accent-emerald)" /> : <button className="btn btn-secondary btn-sm" onClick={() => simulateUpload(doc.id)}><Upload size={12} /></button>}
                                 </div>
                             )
                         })}
                     </div>
 
-                    <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                        <button className="btn btn-secondary">Save Draft</button>
-                        <button className="btn btn-primary" id="btn-run-extraction">
+                    <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+                        <button className="btn btn-primary" onClick={runExtraction} id="btn-run-extraction">
                             <Cpu size={15} /> Run AI Extraction
                         </button>
                     </div>
@@ -206,115 +220,39 @@ export default function DataIngestion() {
                 <div>
                     <div className="alert-box info" style={{ marginBottom: '20px' }}>
                         <Cpu size={16} />
-                        <div>
-                            <strong>AI Extraction Complete</strong> — OCR + NLP processed 552 pages across 3 documents. Confidence score: <strong>97.3%</strong>. Key financial indicators extracted and cross-validated.
-                        </div>
+                        <div><strong>AI Extraction Complete</strong> — 97.3% Confidence score across 552 pages. Financial indicators validated.</div>
                     </div>
-
-                    <div className="card" style={{ marginBottom: '20px' }}>
-                        <div className="card-header">
-                            <div className="card-title">📊 Extracted Financial Indicators</div>
-                            <span className="badge badge-emerald">Cross-Validated</span>
-                        </div>
+                    <div className="card">
+                        <div className="card-header"><div className="card-title">📊 Extracted Financial Indicators</div></div>
                         <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Financial Metric</th>
-                                    <th>Extracted Value</th>
-                                    <th>YoY Change</th>
-                                    <th>Validation</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>Metric</th><th>Value</th><th>YoY</th><th>Status</th></tr></thead>
                             <tbody>
-                                {extractedMetrics.map((m, i) => (
+                                {extractedMetricsData.map((m, i) => (
                                     <tr key={i}>
                                         <td style={{ fontWeight: 500 }}>{m.label}</td>
-                                        <td><strong style={{ color: 'var(--text-primary)' }}>{m.value}</strong></td>
-                                        <td>
-                                            <span style={{ color: m.trend.startsWith('+') ? 'var(--accent-emerald)' : m.trend.startsWith('-') ? 'var(--accent-ruby)' : 'var(--accent-gold)', fontWeight: 600, fontSize: '12px' }}>
-                                                {m.trend}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {m.status === 'verified'
-                                                ? <span className="badge badge-emerald">✓ Verified</span>
-                                                : <span className="badge badge-gold">⚠ Flagged</span>}
-                                        </td>
+                                        <td style={{ fontWeight: 700 }}>{m.value}</td>
+                                        <td style={{ color: m.trend.includes('+') ? 'var(--accent-emerald)' : 'var(--accent-ruby)', fontSize: '12px', fontWeight: 600 }}>{m.trend}</td>
+                                        <td><span className={`badge ${m.status === 'verified' ? 'badge-emerald' : 'badge-gold'}`}>{m.status}</span></td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-
-                    <div className="grid-2">
-                        <div className="card">
-                            <div className="card-title" style={{ marginBottom: '14px' }}>🏭 Business Overview (NLP Extracted)</div>
-                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.8' }}>
-                                <p><strong style={{ color: 'var(--text-primary)' }}>Founded:</strong> 2008 | Maharashtra</p>
-                                <p><strong style={{ color: 'var(--text-primary)' }}>Employees:</strong> 3,240 (FY24)</p>
-                                <p><strong style={{ color: 'var(--text-primary)' }}>Main Products:</strong> Cotton yarn, woven fabric</p>
-                                <p><strong style={{ color: 'var(--text-primary)' }}>Export Revenue:</strong> 32% of total</p>
-                                <p><strong style={{ color: 'var(--text-primary)' }}>Manufacturing Plants:</strong> 4 (Nashik, Aurangabad, Nagpur, Surat)</p>
-                                <p><strong style={{ color: 'var(--text-primary)' }}>Certifications:</strong> ISO 9001:2015, GOTS, BCI</p>
-                            </div>
-                        </div>
-                        <div className="card">
-                            <div className="card-title" style={{ marginBottom: '14px' }}>⚖️ Liabilities & Commitments (Detected)</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                {[
-                                    { item: 'Existing Term Loans', amount: '₹680 Cr', due: 'Mar 2028' },
-                                    { item: 'Working Capital Limits', amount: '₹380 Cr', due: 'Revolving' },
-                                    { item: 'Deferred Tax Liability', amount: '₹42 Cr', due: 'Ongoing' },
-                                    { item: 'Contingent Liabilities', amount: '₹185 Cr', due: 'Disputed' },
-                                    { item: 'FCCB Outstanding', amount: '₹94 Cr', due: 'Dec 2025' },
-                                ].map((l, i) => (
-                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                                        <span style={{ fontSize: '13px' }}>{l.item}</span>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontWeight: 700, color: 'var(--accent-ruby)', fontSize: '13px' }}>{l.amount}</div>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{l.due}</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
                 </div>
             )}
 
             {activeTab === 'anomalies' && (
-                <div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
-                        {anomalies.map((a, i) => (
-                            <div key={i} className={`alert-box ${a.severity}`}>
-                                <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
-                                <div>
-                                    <div style={{ fontWeight: 700, marginBottom: '4px' }}>{a.title}</div>
-                                    <div style={{ opacity: 0.85, lineHeight: 1.6 }}>{a.desc}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="card">
-                        <div className="card-header">
-                            <div className="card-title">🔍 Circular Trading Analysis</div>
-                            <span className="badge badge-emerald">No Circular Trading Detected</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {anomaliesData.map((a, i) => (
+                        <div key={i} className={`alert-box ${a.severity}`}>
+                            <AlertTriangle size={18} />
+                            <div><div style={{ fontWeight: 700 }}>{a.title}</div><div style={{ opacity: 0.8, fontSize: '13px' }}>{a.desc}</div></div>
                         </div>
-                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                            AI cross-referenced GSTR-1 buyer/seller data with bank statement beneficiaries. No suspicious circular entity chains detected.
-                        </p>
-                        <div className="grid-3">
-                            {[
-                                { label: 'GST Transactions Analyzed', value: '14,892' },
-                                { label: 'Related Party Transactions', value: '₹234 Cr (8.2%)' },
-                                { label: 'Suspicious Patterns Found', value: '0' },
-                            ].map((s, i) => (
-                                <div key={i} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-sm)', padding: '14px', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary-200)', marginBottom: '4px' }}>{s.value}</div>
-                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{s.label}</div>
-                                </div>
-                            ))}
+                    ))}
+                    <div className="card">
+                        <div className="card-title" style={{ marginBottom: '12px' }}>🔍 Network Graph Analysis</div>
+                        <div style={{ height: '100px', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: 'var(--text-muted)', border: '1px dashed var(--surface-border)' }}>
+                            [AI Network Visualization: No Circular Trading Chains Detected]
                         </div>
                     </div>
                 </div>
